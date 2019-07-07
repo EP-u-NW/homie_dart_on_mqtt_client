@@ -12,3 +12,4 @@ dependencies:
   meta: ^1.1.7
   mqtt_client: ^5.5.3
   homie_dart: ^1.0.0
+  typed_data: ^1.1.6
