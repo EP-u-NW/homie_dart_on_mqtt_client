@@ -1,0 +1,14 @@
+name: homie_dart_on_mqtt_client
+description: An implementation for a BrokerConnection based on mqtt_client for homie_dart.
+author: EPNW <prokopwieler.hardundsoftware@gmail.com>
+homepage: https://github.com/epnw/homie_dart_on_mqtt_client
+
+version: 1.0.0
+
+environment:
+  sdk: ">=2.1.0 <3.0.0"
+
+dependencies:
+  meta: ^1.1.7
+  mqtt_client: ^5.5.3
+  homie_dart: ^1.0.0
