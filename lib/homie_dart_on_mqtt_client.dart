@@ -21,18 +21,22 @@ class MqttBrokerConnection implements BrokerConnection {
   final Map<int, Completer<Null>> _publishing;
   final Map<String, Completer<Stream<Uint8List>>> _pendingSubscriptions;
   final Map<String, StreamController<Uint8List>> _subscriptions;
+  final String _password,_username;
 
 
   MqttBrokerConnection(
-      {@required String server, @required int port, String clientIdentifier})
+      {@required String server, @required int port, String clientIdentifier, String username, String password})
       : assert(server != null),
         assert(port != null),
+        assert((username==null&&password==null)||(username!=null&&password!=null)),
         this._client = new MqttClient.withPort(
             server, clientIdentifier ?? _defaultClientIdentifier, port),
         this._publishing = new Map<int, Completer<Null>>(),
         this._pendingSubscriptions =
             new Map<String, Completer<Stream<Uint8List>>>(),
-        this._subscriptions = new Map<String, StreamController<Uint8List>>();
+        this._subscriptions = new Map<String, StreamController<Uint8List>>(),
+        this._password=password,
+        this._username=username;
 
   @override
   Future<Null> connect(String lastWillTopic, Uint8List lastWillData,
@@ -46,7 +50,7 @@ class MqttBrokerConnection implements BrokerConnection {
       connMess.withWillRetain();
     }
     _client.connectionMessage = connMess;
-    MqttClientConnectionStatus status = await _client.connect();
+    MqttClientConnectionStatus status = await _client.connect(_username,_password);
     assert(status.state == MqttConnectionState.connected);
 
     _client.published.listen((MqttPublishMessage message) {
