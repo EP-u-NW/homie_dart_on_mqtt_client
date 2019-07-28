@@ -14,58 +14,70 @@ import 'package:homie_dart/homie_dart.dart';
 export 'package:homie_dart/homie_dart.dart';
 
 class MqttBrokerConnection implements BrokerConnection {
-  
-  static const String _defaultClientIdentifier='homie_dart_on_mqtt_client';
-  
+  static const String _defaultClientIdentifier = 'homie_dart_on_mqtt_client';
+
   final MqttClient _client;
   final Map<int, Completer<Null>> _publishing;
   final Map<String, Completer<Stream<Uint8List>>> _pendingSubscriptions;
   final Map<String, StreamController<Uint8List>> _subscriptions;
-  final String _password,_username;
+  final String _password, _username;
 
+  bool _connectAlreadyCalled;
 
   MqttBrokerConnection(
-      {@required String server, @required int port, String clientIdentifier, String username, String password})
+      {@required String server,
+      @required int port,
+      String clientIdentifier,
+      String username,
+      String password})
       : assert(server != null),
         assert(port != null),
-        assert((username==null&&password==null)||(username!=null&&password!=null)),
+        assert((username == null && password == null) ||
+            (username != null && password != null)),
         this._client = new MqttClient.withPort(
             server, clientIdentifier ?? _defaultClientIdentifier, port),
         this._publishing = new Map<int, Completer<Null>>(),
         this._pendingSubscriptions =
             new Map<String, Completer<Stream<Uint8List>>>(),
         this._subscriptions = new Map<String, StreamController<Uint8List>>(),
-        this._password=password,
-        this._username=username;
+        this._password = password,
+        this._username = username,
+        this._connectAlreadyCalled = false;
 
   @override
   Future<Null> connect(String lastWillTopic, Uint8List lastWillData,
       bool lastWillRetained, int lastWillQos) async {
-    MqttConnectMessage connMess = new MqttConnectMessage()
-        .withClientIdentifier(_client.clientIdentifier)
-        .withWillTopic(lastWillTopic)
-        .withWillMessage(utf8.decode(lastWillData))
-        .withWillQos(MqttUtilities.getQosLevel(lastWillQos));
-    if (lastWillRetained) {
-      connMess.withWillRetain();
+    if (_connectAlreadyCalled) {
+      throw new StateError('It is not allowed to call connect a second time on the same instance.');
+    } else {
+      _connectAlreadyCalled=true;
+      MqttConnectMessage connMess = new MqttConnectMessage()
+          .withClientIdentifier(_client.clientIdentifier)
+          .withWillTopic(lastWillTopic)
+          .withWillMessage(utf8.decode(lastWillData))
+          .withWillQos(MqttUtilities.getQosLevel(lastWillQos));
+      if (lastWillRetained) {
+        connMess.withWillRetain();
+      }
+      _client.connectionMessage = connMess;
+      MqttClientConnectionStatus status =
+          await _client.connect(_username, _password);
+      assert(status.state == MqttConnectionState.connected);
+
+      _client.published.listen((MqttPublishMessage message) {
+        _publishing
+            .remove(message.variableHeader.messageIdentifier)
+            ?.complete(null);
+      });
+
+      _client.onSubscribed = (String topic) => _onSubscription(topic, true);
+      _client.onSubscribeFail = (String topic) => _onSubscription(topic, false);
+
+      _client.updates
+          .expand((List<MqttReceivedMessage<MqttMessage>> messages) => messages)
+          .listen((MqttReceivedMessage<MqttMessage> message) =>
+              _onMessage(message.topic, message.payload as MqttPublishMessage));
     }
-    _client.connectionMessage = connMess;
-    MqttClientConnectionStatus status = await _client.connect(_username,_password);
-    assert(status.state == MqttConnectionState.connected);
-
-    _client.published.listen((MqttPublishMessage message) {
-      _publishing
-          .remove(message.variableHeader.messageIdentifier)
-          ?.complete(null);
-    });
-
-    _client.onSubscribed = (String topic) => _onSubscription(topic, true);
-    _client.onSubscribeFail = (String topic) => _onSubscription(topic, false);
-
-    _client.updates
-        .expand((List<MqttReceivedMessage<MqttMessage>> messages) => messages)
-        .listen((MqttReceivedMessage<MqttMessage> message) =>
-            _onMessage(message.topic, message.payload as MqttPublishMessage));
   }
 
   void _onMessage(String topic, MqttPublishMessage message) {
