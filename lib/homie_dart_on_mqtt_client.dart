@@ -12,6 +12,8 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:homie_dart/homie_dart.dart';
 
 export 'package:homie_dart/homie_dart.dart';
+export 'package:homie_dart/homie_legacy_extensions.dart';
+export 'package:homie_dart/epnw_meta_extension.dart';
 
 class MqttBrokerConnection implements BrokerConnection {
   static const String _defaultClientIdentifier = 'homie_dart_on_mqtt_client';
@@ -107,10 +109,10 @@ class MqttBrokerConnection implements BrokerConnection {
       _subscriptions.values.forEach(
           (StreamController<Uint8List> controller) => controller.close());
       _publishing.values.forEach((Completer<Null> completer) =>
-          completer.completeError(new DisconnectingException()));
+          completer.completeError(new DisconnectingError()));
       _pendingSubscriptions.values.forEach(
           (Completer<Stream<Uint8List>> completer) =>
-              completer.completeError(new DisconnectingException()));
+              completer.completeError(new DisconnectingError()));
       Completer<Null> completer = new Completer<Null>();
       _client.onDisconnected = () {
         completer.complete(null);

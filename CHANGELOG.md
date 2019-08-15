@@ -1,3 +1,8 @@
+## [1.2.0] - 15.08.2019
+
+* Added new exports, since homie_dart 2.0.1 introduces new libraries
+* Support for homie_dart 2.0.1
+
 ## [1.1.1] - 29.07.2019
 
 * Throw a StateError if connect is called a second time on the same MqttBrokerConnection instance 
